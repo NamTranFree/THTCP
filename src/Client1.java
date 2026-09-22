@@ -1,4 +1,3 @@
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -24,13 +23,14 @@ public class Client1 {
             InputStream in = socket.getInputStream();
             OutputStream out = socket.getOutputStream();
 
-            // ----- Bước a: Gửi studentCode;qCode -----
             String request = STUDENT_CODE + ";" + Q_CODE;
-            sendLine(out, request);
+            out.write((request + "\n").getBytes(StandardCharsets.UTF_8));
+            out.flush();
             System.out.println("Đã gửi: " + request);
 
-            // ----- Bước b: Nhận chuỗi số nguyên -----
-            String numberLine = readLine(in);
+            byte[] buffer = new byte[4096];
+            int length = in.read(buffer);
+            String numberLine = length == -1 ? null : new String(buffer, 0, length).trim();
             if (numberLine == null || numberLine.isEmpty()) {
                 System.out.println("Không nhận được dữ liệu từ server.");
                 return;
@@ -57,12 +57,11 @@ public class Client1 {
                     second = sorted[i + 1];
                 }
             }
-
             String result = minDistance + "," + first + "," + second;
             System.out.println("Kết quả tính được: " + result);
 
-            // Gửi kết quả lên server
-            sendLine(out, result);
+            out.write((result + "\n").getBytes(StandardCharsets.UTF_8));
+            out.flush();
             System.out.println("Đã gửi lên server: " + result);
 
         } catch (IOException e) {
@@ -72,37 +71,4 @@ public class Client1 {
         System.out.println("Đã đóng kết nối. Kết thúc chương trình.");
     }
 
-    /**
-     * Gửi một chuỗi qua OutputStream, kết thúc bằng ký tự xuống dòng '\n'.
-     */
-    private static void sendLine(OutputStream out, String data) throws IOException {
-        String line = data + "\n";
-        out.write(line.getBytes(StandardCharsets.UTF_8));
-        out.flush();
-    }
-
-    /**
-     * Đọc dữ liệu từ InputStream cho đến khi gặp ký tự '\n' (hoặc hết luồng).
-     */
-    private static String readLine(InputStream in) throws IOException {
-        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-        int b;
-        boolean received = false;
-
-        while ((b = in.read()) != -1) {
-            received = true;
-            if (b == '\n') {
-                break;
-            }
-            if (b == '\r') {
-                continue; // bỏ qua ký tự CR nếu có (CRLF)
-            }
-            buffer.write(b);
-        }
-
-        if (!received) {
-            return null; // luồng đã đóng, không có dữ liệu
-        }
-        return buffer.toString(StandardCharsets.UTF_8.name());
-    }
 }
